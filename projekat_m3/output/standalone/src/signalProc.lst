@@ -1,0 +1,183 @@
+1     						
+2     	 0000				_SIGNALPROC_ASM	// comment if we do not want assembler processing
+3     						
+4     							.if defined (_SIGNALPROC_ASM)
+5     						
+6     	 0010				_BLOCK_SIZE .equ 16
+7     	 0000				_L_CH .equ 0
+8     	 0001				_R_CH .equ 1
+9     	 0002				_LS_CH .equ 2
+10    	 0003				_RS_CH .equ 3
+11    	 0004				_C_CH .equ 4
+12    	 0005				_LFE_CH .equ 5
+13    						
+14    	 0000					.public _signalProcessing
+15    	 0000					.extern _limiterThreshold
+16    	 0000					.extern _variablesGain
+17    	 0000					.extern _outputMode
+18    							
+19    						 	.code_ovly 
+19     >> start of macro: .code_ovly
+1+    									seg_single , "CODE_OVLY", CODE
+1+     >> start of macro: seg_single
+1+    						  .if ( "" != "" ) & defined( ___SegStart_CODE_ )
+2+    						    segment
+3+    						  .else
+4+    						    segment "CODE_OVLY"
+5+    							.if "" != ""
+6+    						___SegStart_CODE_
+7+    							.endif
+8+    						  .endif
+9+    							#RememberSegmentType
+10+    >> end of macro: seg_single
+2+     >> end of macro: .code_ovly
+20    						 	
+21    						 	# prema CCC2 pozivnoj konvenciji: 
+22    						 	# i0 - parametar pokazivac, pIn
+23    						 	# i1 - parametar pokazivac, pOut
+24    	 0000				_signalProcessing:
+25    							# na raspolaganju a0 a1 b0 b1 i4 i5
+26    	 0000	 B84A0000		i4 = (_variablesGain)
+27    							
+28    	 0001	 81000045		do(_BLOCK_SIZE), >loop
+29    								# ----------------------------------------------------------------------------
+30    								# first stage, apply variable gain (L and R channel processing)
+31    								# *samplePtrOutL = *samplePtrInL * *variablesGainPtrL;
+32    								# *samplePtrOutR = *samplePtrInR * *variablesGainPtrR;
+33    	 0002	 85050000			i5 = i0 + (_L_CH * _BLOCK_SIZE)
+34    	 0003	 80940005			x0 = ymem[i5]
+35    	 0004	 84140004			y0 = xmem[i4]
+36    	 0005	 00002400			a0 = x0 * y0
+37    	 0006	 85150000			i5 = i1 + (_L_CH * _BLOCK_SIZE)
+38    	 0007	 88D40001			ymem[i1] = a0
+39    								
+40    	 0008	 85050010			i5 = i0 + (_R_CH * _BLOCK_SIZE)
+41    	 0009	 80940005			x0 = ymem[i5] 
+42    	 000A	 020C7FFF			i4+=1
+43    	 000B	 84140024			y0 = xmem[i4]; i4-=1
+44    	 000C	 00002400			a0 = x0 * y0
+45    	 000D	 85150010			i5 = i1 + (_R_CH * _BLOCK_SIZE)
+46    	 000E	 88D40005			ymem[i5] = a0
+47    								# ----------------------------------------------------------------------------
+48    								# if (outputMode > 0)
+49    	 000F	 88040000			a0 = xmem[_outputMode]
+50    	 0010	 8C7A0000			b0 = (0)
+51    	 0011	 00004F20			a0 - b0
+52    	 0012	 84880044			if (a < 0) jmp>end		
+53    									# second stage, full wave rectifier distortion (LS and RS channel processing)
+54    									# if (*samplePtrOutL < FRACT_NUM(0.0))
+55    									#	*samplePtrOutLs = -*samplePtrOutL;
+56    									# else
+57    									#	*samplePtrOutLs = *samplePtrOutL;
+58    						
+59    									# if (*samplePtrOutR < FRACT_NUM(0.0))
+60    									#	*samplePtrOutRs = -*samplePtrOutR;
+61    									# else
+62    									#	*samplePtrOutRs = *samplePtrOutR;
+63    	 0013	 85150000				i5 = i1 + (_L_CH * _BLOCK_SIZE)
+64    	 0014	 88940005				a0 = ymem[i5]
+65    	 0015	 8C7A0000				b0 = (0)
+66    	 0016	 00004F20				a0 - b0
+67    	 0017	 85480019				if (a > 0) jmp>else
+68    	 0018	 00004C80					a0 = -a0
+69    	 0019	 85150020	%else:		i5 = i1 + (_LS_CH * _BLOCK_SIZE)
+70    	 001A	 88D40005				ymem[i5] = a0
+71    						
+72    	 001B	 85150010				i5 = i1 + (_R_CH * _BLOCK_SIZE)
+73    	 001C	 88940005				a0 = ymem[i5]
+74    	 001D	 00004F20				a0 - b0
+75    	 001E	 85480020				if (a > 0) jmp>else
+76    	 001F	 00004C80					a0 = -a0
+77    	 0020	 85150030	%else:		i5 = i1 + (_RS_CH * _BLOCK_SIZE)
+78    	 0021	 88D40005				ymem[i5] = a0	
+79    								# ----------------------------------------------------------------------------
+80    								# if (outputMode > 1)
+81    	 0022	 88040000			a0 = xmem[_outputMode]
+82    	 0023	 9C4A0001			uhalfword(b0h) = (0x1)
+83    	 0024	 00004F20			a0 - b0
+84    	 0025	 84880044			if (a < 0) jmp>end
+85    									# third stage, L+R=C (C channel processing)
+86    									# *samplePtrOutC = saturation(*samplePtrOutL + *samplePtrOutR);
+87    	 0026	 85150000				i5 = i1 + (_L_CH * _BLOCK_SIZE)
+88    	 0027	 89940005				a1 = ymem[i5]
+89    	 0028	 85150010				i5 = i1 + (_R_CH * _BLOCK_SIZE)
+90    	 0029	 8D940005				b1 = ymem[i5]
+91    	 002A	 000044A8				a0 = a1 + b1
+92    									
+93    									# saturation(*samplePtrOutLs + *samplePtrOutRs);
+94    	 002B	 8C040000				b0 = xmem[_limiterThreshold]
+95    	 002C	 00004F20				a0 - b0
+96    	 002D	 8488002F				if (a < 0) jmp>checkFmin
+97    	 002E	 4C487FFF					a0 = b0			
+98    	 002F	 00004C84	%checkFmin:	b0 = -b0
+99    	 0030	 00004F20				a0 - b0
+100   	 0031	 84C80033				if (a >= 0) jmp>saturated
+101   	 0032	 4C487FFF					a0 = b0
+102   	 0033				%saturated:
+103   	 0033	 85150040				i5 = i1 + (_C_CH * _BLOCK_SIZE)
+104   	 0034	 88D40005				ymem[i5] = a0
+105   									
+106   									# fourth stage, LS+RS=LFE (LFE channel processing)
+107   									# *samplePtrOutLfe = saturation(*samplePtrOutLs + *samplePtrOutRs);
+108   	 0035	 85150020				i5 = i1 + (_LS_CH * _BLOCK_SIZE)
+109   	 0036	 89940005				a1 = ymem[i5]
+110   	 0037	 85150030				i5 = i1 + (_RS_CH * _BLOCK_SIZE)
+111   	 0038	 8D940005				b1 = ymem[i5]
+112   	 0039	 000044A8				a0 = a1 + b1
+113   									
+114   									# saturation(*samplePtrOutLs + *samplePtrOutRs);
+115   	 003A	 8C040000				b0 = xmem[_limiterThreshold]
+116   	 003B	 00004F20				a0 - b0
+117   	 003C	 8488003E				if (a < 0) jmp>checkFmin
+118   	 003D	 4C487FFF					a0 = b0
+119   	 003E	 00004C84	%checkFmin:	b0 = -b0
+120   	 003F	 00004F20				a0 - b0
+121   	 0040	 84C80042				if (a >= 0) jmp>saturated
+122   	 0041	 4C487FFF					a0 = b0
+123   	 0042				%saturated:
+124   	 0042	 85150050				i5 = i1 + (_LFE_CH * _BLOCK_SIZE)
+125   	 0043	 88D40005				ymem[i5] = a0
+126   										
+127   	 0044				%end:	
+128   	 0044	 02087FFF			i0+=1				
+129   	 0045	 02097FFF	%loop:	i1+=1
+130   						
+131   	 0046	 81880000		ret
+132   							
+133   							.endif
+134   							
+				 SYMBOL TABLE 
+
+    Name                                                                                    Type                  Value 
+
+_BLOCK_SIZE                                                                     					 Number				          16 (10H)
+_COMMON_INC_PATH_                                                               					 Define                 "C:/CirrusDSP/crystal32/common/inc/"
+_C_CH                                                                           					 Number				          4 (4H)
+_DSP_                                                                           					 Define                 "a"
+_LFE_CH                                                                         					 Number				          5 (5H)
+_LOCAL_INC_PATH_                                                                					 Define                 "inc/"
+_LOCAL_SRC_PATH_                                                                					 Define                 "src/"
+_LS_CH                                                                          					 Number				          2 (2H)
+_L_CH                                                                           					 Number				         0 (0H)
+_MUI_VERSION_                                                                   					 Define                 "020000"
+_OVLY_                                                                          					 Define                 "standalone"
+_OVLY_REVISION_                                                                 					 Define                 "020000"
+_ROUTER_INC_PATH_                                                               					 Define                 "rom_inc/"
+_RS_CH                                                                          					 Number				          3 (3H)
+_R_CH                                                                           					 Number				          1 (1H)
+_SIGNALPROC_ASM                                                                 			  Unused Relocatable        __INIT:0000H
+_SLOT_                                                                          					 Define                 "0"
+_TARGET_FAMILY_                                                                 					 Define                 "crystal32"
+_TOOLS_VERSION_                                                                 					 Define                 "0x0701"
+_VERSION_                                                                       					 Define                 "00"
+__CASM_VER__                                                                    			  Unused Variable		        0 (701H)
+_limiterThreshold                                                               					 External   
+_outputMode                                                                     					 External   
+_signalProcessing                                                               			  Public Relocatable       signalProc_GEN_0000:0000H
+_variablesGain                                                                  					 External   
+
+	       SEGMENTS:
+
+Size			  Name										 Class
+0000H	 __INIT                                  			 CODE                                    
+0047H	 signalProc_GEN_0000                     			 CODE_OVLY                               

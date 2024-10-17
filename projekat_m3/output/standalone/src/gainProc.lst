@@ -1,0 +1,41 @@
+1     						
+2     						// _PROC_ASM
+3     						
+4     							.if defined (_PROC_ASM)
+5     						
+6     							.public __gainProcessing
+7     							
+8     						 	.code_ovly 
+9     						 	
+10    						 	# prema CCC2 pozivnoj konvenciji: 
+11    						 	# i0 - parametar pokazivac, pIn
+12    						 	# i1 - parametar pokazivac, pOut
+13    						_gainProcessing:
+14    							
+15    						
+16    							ret
+17    							
+18    							.endif
+19    							
+				 SYMBOL TABLE 
+
+    Name                                                                                    Type                  Value 
+
+_COMMON_INC_PATH_                                                               					 Define                 "C:/CirrusDSP/crystal32/common/inc/"
+_DSP_                                                                           					 Define                 "a"
+_LOCAL_INC_PATH_                                                                					 Define                 "inc/"
+_LOCAL_SRC_PATH_                                                                					 Define                 "src/"
+_MUI_VERSION_                                                                   					 Define                 "020000"
+_OVLY_                                                                          					 Define                 "standalone"
+_OVLY_REVISION_                                                                 					 Define                 "020000"
+_ROUTER_INC_PATH_                                                               					 Define                 "rom_inc/"
+_SLOT_                                                                          					 Define                 "0"
+_TARGET_FAMILY_                                                                 					 Define                 "crystal32"
+_TOOLS_VERSION_                                                                 					 Define                 "0x0701"
+_VERSION_                                                                       					 Define                 "00"
+__CASM_VER__                                                                    			  Unused Variable		        0 (701H)
+
+	       SEGMENTS:
+
+Size			  Name										 Class
+0000H	 __INIT                                  			 CODE                                    

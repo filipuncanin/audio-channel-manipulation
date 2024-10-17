@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<project basedir="C:/CirrusDSP/clide/workspace/projekat_m3" name="projekat_m3">
+	<target description="Assembling .a and .s files..." name="casm">
+		<delete file="C:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/src/signalProc.O"/>
+		<exec executable="C:/CirrusDSP/bin/casm" failonerror="true" resultProperty="casmResult0">
+			<arg value="C:/CirrusDSP/clide/workspace/projekat_m3/src/signalProc.a"/>
+			<arg value="--debug"/>
+			<arg value="-c"/>
+			<arg value="-s"/>
+			<arg value="-e"/>
+			<arg value="--cdl"/>
+			<arg value="-D_TOOLS_VERSION_=0x0701"/>
+			<arg value="-D_SLOT_=0"/>
+			<arg value="-D_OVLY_=standalone"/>
+			<arg value="-D_OVLY_REVISION_=020000"/>
+			<arg value="-D_VERSION_=00"/>
+			<arg value="-D_DSP_=a"/>
+			<arg value="-D_COMMON_INC_PATH_=C:/CirrusDSP/crystal32/common/inc/"/>
+			<arg value="-D_TARGET_FAMILY_=crystal32"/>
+			<arg value="-D_MUI_VERSION_=020000"/>
+			<arg value="-IC:/CirrusDSP/include/"/>
+			<arg value="-IC:/CirrusDSP/include/dsplib/"/>
+			<arg value="-IC:/CirrusDSP/clide/workspace/projekat_m3/inc/"/>
+			<arg value="-lC:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/src/signalProc.lst"/>
+			<arg value="-oC:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/src/signalProc.O"/>
+			<arg value="-iC:/CirrusDSP/crystal32/common/inc/base.h"/>
+			<arg value="-D_LOCAL_SRC_PATH_=src/"/>
+			<arg value="-D_LOCAL_INC_PATH_=inc/"/>
+			<arg value="-D_ROUTER_INC_PATH_=rom_inc/"/>
+		</exec>
+		<condition property="assemblyError">
+			<or>
+				<not>
+					<equals arg1="${casmResult0}" arg2="0"/>
+				</not>
+			</or>
+		</condition>
+	</target>
+	<target if="assemblyError" name="checkAssemblyErrors">
+		<fail message="Please check assembler errors."/>
+	</target>
+	<target description="Linking files..." name="clink">
+		<exec executable="C:/CirrusDSP/bin/clink" failonerror="true">
+			<arg value="-oC:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/projekat_m3.img"/>
+			<arg value="-fC:/CirrusDSP/crystal32/memory_maps/v00.mem.xml"/>
+			<arg value="C:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/src/main.O"/>
+			<arg value="C:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/src/signalProc.O"/>
+			<arg value="--output_type=RAM"/>
+			<arg value="--overlay_type=standalone"/>
+			<arg value="-lC:/CirrusDSP/lib/"/>
+			<arg value="-lC:/CirrusDSP/lib/dsplib"/>
+			<arg value="-lC:/CirrusDSP/lib/dsplib/crystal32/"/>
+		</exec>
+	</target>
+	<target depends="clink" description="Creating .uld file..." name="lnkuld">
+		<exec executable="C:/CirrusDSP/bin/lnkuld" failonerror="true">
+			<arg value="-ja"/>
+			<arg value="C:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/projekat_m3.img"/>
+			<arg value="C:/CirrusDSP/clide/workspace/projekat_m3/output/standalone/projekat_m3.uld"/>
+		</exec>
+	</target>
+</project>
